@@ -30,6 +30,6 @@ pipeline {
     
        stages {
         stage('Install Terraform') {
-            steps
+            steps}
     }
 }
