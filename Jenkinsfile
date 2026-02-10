@@ -2,22 +2,40 @@ pipeline {
     agent any
     
     stages {
-        stage('Checkout & List Files') {
+        stage('Checkout') {
             steps {
                 checkout scm
+                sh 'ls -la'
+            }
+        }
+        
+        stage('Terraform Init') {
+            steps {
                 sh '''
-                    ls -la
-                    terraform --version || echo "Terraform not available"
+                    terraform init
                 '''
             }
         }
         
-        stage('Run Terraform Locally') {
+        stage('Terraform Plan') {
             steps {
                 sh '''
-                    echo "Terraform CLI not available in base Jenkins image"
-                    echo "Download: https://developer.hashicorp.com/terraform/install"
-                    exit 0
+                    terraform plan -out=tfplan
+                '''
+                archiveArtifacts artifacts: 'tfplan', allowEmptyArchive: true
+            }
+        }
+        
+        stage('Approval') {
+            steps {
+                input message: 'Deploy to AWS?', ok: 'Approve'
+            }
+        }
+        
+        stage('Terraform Apply') {
+            steps {
+                sh '''
+                    terraform apply -auto-approve tfplan
                 '''
             }
         }
