@@ -10,14 +10,20 @@ pipeline {
         
         stage('Terraform Init') {
             steps {
-                sh 'terraform init'
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
+                                 credentialsId: 'aws-terraform']]) {
+                    sh 'terraform init'
+                }
             }
         }
         
         stage('Terraform Plan') {
             steps {
-                sh 'terraform plan -out=tfplan'
-                archiveArtifacts artifacts: 'tfplan', allowEmptyArchive: true
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
+                                 credentialsId: 'aws-terraform']]) {
+                    sh 'terraform plan -out=tfplan'
+                }
+                archiveArtifacts artifacts: 'tfplan'
             }
         }
         
@@ -29,14 +35,11 @@ pipeline {
         
         stage('Terraform Apply') {
             steps {
-                sh 'terraform apply -auto-approve tfplan'
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
+                                 credentialsId: 'aws-terraform']]) {
+                    sh 'terraform apply -auto-approve tfplan'
+                }
             }
-        }
-    }
-    
-    post {
-        always {
-            echo 'Pipeline completed'
         }
     }
 }
