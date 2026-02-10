@@ -1,67 +1,25 @@
 pipeline {
-    agent none
+    agent any
     
     stages {
-        stage('Terraform') {
-            agent {
-                docker {
-                    image 'hashicorp/terraform:latest'
-                    args '-u root --entrypoint=""'
-                }
-            }
-            
-            stages {
-                stage('Checkout') {
-                    steps {
-                        echo '✅ Checking out Terraform code'
-                        checkout scm
-                    }
-                }
-                
-                stage('Terraform Init') {
-                    steps {
-                        echo '🔄 Initializing Terraform...'
-                        sh 'terraform init -input=false'
-                    }
-                }
-                
-                stage('Terraform Validate') {
-                    steps {
-                        echo '✅ Validating config...'
-                        sh 'terraform validate'
-                    }
-                }
-                
-                stage('Terraform Plan') {
-                    steps {
-                        echo '📋 Creating plan...'
-                        sh '''
-                            terraform workspace new or select default
-                            terraform plan -input=false -out=tfplan
-                        '''
-                        archiveArtifacts artifacts: 'tfplan', allowEmptyArchive: false
-                    }
-                }
-                
-                stage('Approval') {
-                    steps {
-                        input message: '🚀 Deploy to AWS?', ok: 'Approve'
-                    }
-                }
-                
-                stage('Terraform Apply') {
-                    steps {
-                        echo '🚀 Deploying infrastructure...'
-                        sh 'terraform apply -input=false -auto-approve tfplan'
-                    }
-                }
+        stage('Checkout & List Files') {
+            steps {
+                checkout scm
+                sh '''
+                    ls -la
+                    terraform --version || echo "Terraform not available"
+                '''
             }
         }
-    }
-    
-    post {
-        always {
-            echo '🏁 Pipeline completed!'
+        
+        stage('Run Terraform Locally') {
+            steps {
+                sh '''
+                    echo "Terraform CLI not available in base Jenkins image"
+                    echo "Download: https://developer.hashicorp.com/terraform/install"
+                    exit 0
+                '''
+            }
         }
     }
 }
