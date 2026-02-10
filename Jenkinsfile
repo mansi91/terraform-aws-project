@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'hashicorp/terraform:latest'
-            args '-u root'
-        }
-    }
+    agent any
     
     stages {
         stage('Checkout') {
@@ -22,13 +17,13 @@ pipeline {
         stage('Terraform Plan') {
             steps {
                 sh 'terraform plan -out=tfplan'
-                archiveArtifacts artifacts: 'tfplan'
+                archiveArtifacts artifacts: 'tfplan', allowEmptyArchive: true
             }
         }
         
         stage('Approval') {
             steps {
-                input 'Deploy?'
+                input message: 'Deploy to AWS?', ok: 'Approve'
             }
         }
         
@@ -38,7 +33,10 @@ pipeline {
             }
         }
     }
-}
+    
+    post {
+        always {
+            echo 'Pipeline completed'
         }
     }
 }
