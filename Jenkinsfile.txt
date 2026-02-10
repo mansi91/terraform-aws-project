@@ -1,23 +1,10 @@
 pipeline {
     agent any
     
-    parameters {
-        choice(
-            name: 'ACTION',
-            choices: ['plan', 'apply', 'destroy'],
-            description: 'Terraform action to perform'
-        )
-        booleanParam(
-            name: 'AUTO_APPROVE',
-            defaultValue: false,
-            description: 'Skip manual approval?'
-        )
-    }
-    
     stages {
         stage('Checkout') {
             steps {
-                checkout scm  // Automatically uses your GitHub repo
+                checkout scm  // Auto-checkout from GitHub repo
             }
         }
         
@@ -34,22 +21,10 @@ pipeline {
             }
         }
         
-        stage('Approval') {
-            when { not { equals expected: true, actual: params.AUTO_APPROVE } }
+        stage('Terraform Apply') {
             steps {
-                input message: 'Apply this plan?', ok: 'Apply'
-            }
-        }
-        
-        stage('Terraform Action') {
-            steps {
-                script {
-                    if (params.ACTION == 'apply') {
-                        sh 'terraform apply tfplan'
-                    } else if (params.ACTION == 'destroy') {
-                        sh 'terraform destroy -auto-approve'
-                    }
-                }
+                input 'Apply the plan?'
+                sh 'terraform apply -auto-approve tfplan'
             }
         }
     }
