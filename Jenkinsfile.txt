@@ -1,0 +1,56 @@
+pipeline {
+    agent any
+    
+    parameters {
+        choice(
+            name: 'ACTION',
+            choices: ['plan', 'apply', 'destroy'],
+            description: 'Terraform action to perform'
+        )
+        booleanParam(
+            name: 'AUTO_APPROVE',
+            defaultValue: false,
+            description: 'Skip manual approval?'
+        )
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm  // Automatically uses your GitHub repo
+            }
+        }
+        
+        stage('Terraform Init') {
+            steps {
+                sh 'terraform init'
+            }
+        }
+        
+        stage('Terraform Plan') {
+            steps {
+                sh 'terraform plan -out=tfplan'
+                archiveArtifacts 'tfplan'
+            }
+        }
+        
+        stage('Approval') {
+            when { not { equals expected: true, actual: params.AUTO_APPROVE } }
+            steps {
+                input message: 'Apply this plan?', ok: 'Apply'
+            }
+        }
+        
+        stage('Terraform Action') {
+            steps {
+                script {
+                    if (params.ACTION == 'apply') {
+                        sh 'terraform apply tfplan'
+                    } else if (params.ACTION == 'destroy') {
+                        sh 'terraform destroy -auto-approve'
+                    }
+                }
+            }
+        }
+    }
+}
