@@ -27,5 +27,11 @@ pipeline {
                 sh 'terraform apply -auto-approve tfplan'
             }
         }
+        pipeline {
+    agent any
+    
+    stages {
+        stage('Install Terraform') {
+            steps
     }
 }
