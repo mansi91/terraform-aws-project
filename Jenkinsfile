@@ -1,56 +1,60 @@
 pipeline {
-    agent any
+    agent none
     
     stages {
-        stage('Checkout') {
-            steps {
-                echo '✅ Checking out Terraform code from GitHub'
-                checkout scm
-            }
-        }
-        
-        stage('Terraform Init') {
-            steps {
-                echo '🔄 Initializing Terraform...'
-                sh '''
-                    terraform init -input=false
-                '''
-            }
-        }
-        
-        stage('Terraform Validate') {
-            steps {
-                echo '✅ Validating Terraform config...'
-                sh '''
-                    terraform validate
-                '''
-            }
-        }
-        
-        stage('Terraform Plan') {
-            steps {
-                echo '📋 Creating execution plan...'
-                sh '''
-                    terraform plan -input=false -out=tfplan
-                '''
-                archiveArtifacts artifacts: 'tfplan', fingerprint: true, allowEmptyArchive: true
-            }
-        }
-        
-        stage('Waiting for Approval') {
-            steps {
-                timeout(time: 7, unit: 'DAYS') {
-                    input message: 'Approve deployment?', ok: '🚀 Deploy Now'
+        stage('Terraform') {
+            agent {
+                docker {
+                    image 'hashicorp/terraform:latest'
+                    args '-u root --entrypoint=""'
                 }
             }
-        }
-        
-        stage('Terraform Apply') {
-            steps {
-                echo '🚀 Deploying to AWS...'
-                sh '''
-                    terraform apply -input=false tfplan
-                '''
+            
+            stages {
+                stage('Checkout') {
+                    steps {
+                        echo '✅ Checking out Terraform code'
+                        checkout scm
+                    }
+                }
+                
+                stage('Terraform Init') {
+                    steps {
+                        echo '🔄 Initializing Terraform...'
+                        sh 'terraform init -input=false'
+                    }
+                }
+                
+                stage('Terraform Validate') {
+                    steps {
+                        echo '✅ Validating config...'
+                        sh 'terraform validate'
+                    }
+                }
+                
+                stage('Terraform Plan') {
+                    steps {
+                        echo '📋 Creating plan...'
+                        sh '''
+                            terraform workspace new or select default
+                            terraform plan -input=false -out=tfplan
+                        '''
+                        archiveArtifacts artifacts: 'tfplan', allowEmptyArchive: false
+                    }
+                }
+                
+                stage('Approval') {
+                    steps {
+                        input message: '🚀 Deploy to AWS?', ok: 'Approve'
+                    }
+                }
+                
+                stage('Terraform Apply') {
+                    steps {
+                        echo '🚀 Deploying infrastructure...'
+                        sh 'terraform apply -input=false -auto-approve tfplan'
+                    }
+                }
             }
         }
     }
@@ -58,7 +62,6 @@ pipeline {
     post {
         always {
             echo '🏁 Pipeline completed!'
-            cleanWs()
         }
     }
 }
