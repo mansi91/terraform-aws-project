@@ -1,43 +1,44 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'hashicorp/terraform:latest'
+            args '-u root'
+        }
+    }
     
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
-                sh 'ls -la'
             }
         }
         
         stage('Terraform Init') {
             steps {
-                sh '''
-                    terraform init
-                '''
+                sh 'terraform init'
             }
         }
         
         stage('Terraform Plan') {
             steps {
-                sh '''
-                    terraform plan -out=tfplan
-                '''
-                archiveArtifacts artifacts: 'tfplan', allowEmptyArchive: true
+                sh 'terraform plan -out=tfplan'
+                archiveArtifacts artifacts: 'tfplan'
             }
         }
         
         stage('Approval') {
             steps {
-                input message: 'Deploy to AWS?', ok: 'Approve'
+                input 'Deploy?'
             }
         }
         
         stage('Terraform Apply') {
             steps {
-                sh '''
-                    terraform apply -auto-approve tfplan
-                '''
+                sh 'terraform apply -auto-approve tfplan'
             }
+        }
+    }
+}
         }
     }
 }
